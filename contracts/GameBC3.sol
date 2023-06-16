@@ -2,49 +2,46 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-//import "hardhat/console.sol";
-//import "@openzeppelin/contracts/access/Ownable.sol";
-//import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
 
 contract GAMEBC3 {
-
     using SafeMath for uint256;
 
-    uint256 public constant maxNumberOfPlayers = 20; // Sets the maximum number of players at 20.
-    uint256 public constant minNumberOfPlayers = 3; // Min. number of players 
-    uint256 public constant entryFee = 0.1 * 10**18; // Entry fee in Wei
-    uint256 public thirdPlayerJoinTime; // Saves the blockheight after a third play has joined the game
-    uint256 public revealPhaseStartTime; // Start time of the reveal phase
-    uint256 public NumberPlayersWithHash = 0; // Counter for all players who have revealed their numbers
-    uint256 public joinGameCountdown = 150; // Two and a half minutes in seconds
-    uint256 public revealTimeCountdown = 180; // Three minutes in seconds
+    // Constant variables
+    uint256 public constant maxNumberOfPlayers = 20;
+    uint256 public constant minNumberOfPlayers = 3;
+    uint256 public constant entryFee = 0.1 * 10**18;
+
+    // Game state variables
+    uint256 public gameStartTime;
+    uint256 public revealPhaseStartTime;
     uint256 public numberJoinedPlayers;
+    uint256 public numberPlayersWithHash = 0;
+    bool public gameStarted = false;
+    bool public gameEnded = false;
+    bool public revealPhase = false;
 
-    bool public gameStarted; // Variable indicating whether the game is running or not.
-    bool public gameEnded;  // Variable indicating whether the game is finished or not.
-    bool public revealPhase = false; 
-
-    mapping(address => bool) public hasPaid; // Mapping of which address had paid the entryFee
-    mapping(address => bytes32) public playerCommitments; // Stores the hash of the commitment (number + salt)
-    mapping(address => uint256) public revealedNumbers; /**This mapping variable stores the numbers submitted by the player as key-value pairs, where the key is the player's address and the
-    value is the number submitted by the player. This allows the submitted numbers of each player to be retrieved quickly**/
-    mapping(address => bool) public playerHasRevealed; //mapping for revealed numbers
-
-    address payable public contractOwner; // Owner of the contract
-    address payable private winner; // The winner of the game
+    // Player variables
+    mapping(address => bool) public hasPaid;
+    mapping(address => bytes32) public playerCommitments;
+    mapping(address => uint256) private revealedNumbers;
+    mapping(address => bool) public playerHasRevealed;
     address payable[] public playersWithHash;
-    address payable[] public playersWhoHaveRevealed; // All Players that have revealed their numbers during the revealTime
-    address payable[] closestPlayers;
-    
-    struct Fees {
-            uint256 totalEntryFees;
-            uint256 serviceFee;
-            uint256 winnerReward;
-        }
-        
+    address payable[] public playersWhoHaveRevealed;
+    address payable[] public closestPlayers;
+
+    // Contract variables
+    address payable public contractOwner;
+    address payable private winner;
     Fees public gameFees;
 
+    // Fees struct
+    struct Fees {
+        uint256 totalEntryFees;
+        uint256 serviceFee;
+        uint256 winnerReward;
+    }
+
+    // Events
     event GameStarted(uint256 timestamp);
     event GameEnded(uint256 timestamp, address WinnerAddress);
     event ServiceFeePaid(address contractOwner, uint256 fee);
@@ -58,7 +55,6 @@ contract GAMEBC3 {
     event PlayerRefundClaimed(address indexed playerAddress, uint256 amount, uint256 timestamp);
 
 
-
     constructor() payable {
             contractOwner = payable(msg.sender);
             gameStarted = false;
@@ -70,7 +66,8 @@ contract GAMEBC3 {
         _;
     }
 
-    //Join the game
+
+    /// @notice Allows a player to join the game after paying the entry fee.
     function joinGame() public payable {
         require(gameStarted == false, "This game is already finished!");
         require(!hasPaid[msg.sender], "You have already paid the entry fee");
@@ -85,16 +82,24 @@ contract GAMEBC3 {
         emit EntryFeePaid(msg.sender, msg.value, block.timestamp);
     }
 
-    //Commit the hash of your number + salt    
-    function commitHash(string memory _hash) public payable {
+
+    /// @notice Allows a player to commit their hashed number and salt.
+    /// @param _hash Hashed combination of the player's number and a secret salt. 
+    function commitHash(string memory _hash) public {
         require(gameStarted == false, "You can't submit a number, this game is already finished!");
         require(revealPhase == false, "Reveal phase has started, cannot commit number now");
         require(playerCommitments[msg.sender] == bytes32(0), "You have already committed a number and salt"); //Checks whether the player has already submitted a number.
         require(msg.sender != contractOwner, "contract Owner cannot participate");
         require(hasPaid[msg.sender], "You must pay the entry fee");
 
-        bytes32 commit = keccak256(abi.encodePacked(_hash));
-        playerCommitments[msg.sender] = commit;
+        bytes32 convertedHash;
+
+        assembly {
+            convertedHash := mload(add(_hash, 32))
+        }
+
+        playerCommitments[msg.sender] = convertedHash;
+
 
         playersWithHash.push(payable(msg.sender));
         
@@ -102,32 +107,33 @@ contract GAMEBC3 {
 
             
         if (playersWithHash.length == minNumberOfPlayers) {
-            thirdPlayerJoinTime = block.timestamp;
+            gameStartTime = block.timestamp;
         }
 
             // Checks if the minimum number of players have joined and enough blocks have passed
-        if (playersWithHash.length >= minNumberOfPlayers && !gameStarted && block.timestamp >= thirdPlayerJoinTime + joinGameCountdown) {
+        if (playersWithHash.length >= minNumberOfPlayers && !gameStarted && block.timestamp >= gameStartTime + 90) {
             startRevealTime();
         }
     }
 
 
-    //Starts the game reveal time 
+     /// @dev Starts the reveal phase of the game.
      function startRevealTime() internal {
         require(gameStarted == false, "The game has already started!");
         require(playersWithHash.length <= maxNumberOfPlayers);
-        require(block.timestamp >= thirdPlayerJoinTime + joinGameCountdown, "Wait five minutes after the third player has joined until the game starts.");
+        require(block.timestamp >= gameStartTime + 90, "Wait two and a half minutes after the third player has joined until the reveal phase starts.");
 
         revealPhase = true;  // Start the reveal phase
         revealPhaseStartTime = block.timestamp;
         emit RevealPhaseStarted(block.timestamp);
     } 
 
-
+    /// @notice Allows a player to reveal their number and salt, which should match the previously committed hash.
+    /// @param _number The original number a player chose.
+    /// @param _salt The original salt a player chose.
     function revealNumber(uint256 _number, string memory _salt) public {
         require(revealPhase == true, "The reveal phase has not started yet wait for four blocks to be mined.");
-        require(block.timestamp <= revealPhaseStartTime + revealTimeCountdown, "The reveal phase has ended. You cannot reveal your number anymore.");
-        require(!playerHasRevealed[msg.sender], "You have already revealed your number.");
+        require(block.timestamp <= gameStartTime + 180, "The reveal phase has ended. You cannot reveal your number anymore.");
         require(!playerHasRevealed[msg.sender], "You have already revealed your number.");
         require(keccak256(abi.encodePacked(_number, _salt)) == playerCommitments[msg.sender], "The revealed number and salt do not match the committed values.");
         require(_number >= 0 && _number <= 1000, "Number must be between 0 and 1000.");
@@ -143,13 +149,13 @@ contract GAMEBC3 {
         determineWinner();
     }
 
-//service muss der dritte Spieler bisher zahlen --> ändern auf Contract Owner!
 
-
+    /// @notice Determines and sets the winner of the game.
+    /// @return Address and reward of the winner.
     function determineWinner() public returns (address, uint256) {
         require(gameStarted == true, "Game has not started yet.");
         require(gameEnded == false, "Game has ended.");
-        require(NumberPlayersWithHash >= minNumberOfPlayers && NumberPlayersWithHash <= maxNumberOfPlayers, "Number of players who have revealed their numbers is not within the min and max limit.");
+        require(playersWithHash.length >= minNumberOfPlayers && playersWithHash.length <= maxNumberOfPlayers, "Number of players who have revealed their numbers is not within the min and max limit.");
 
         // Calculate the average of all player numbers
         uint256 total = 0;
@@ -190,8 +196,9 @@ contract GAMEBC3 {
         gameFees.totalEntryFees = address(this).balance;
         gameFees.serviceFee = gameFees.totalEntryFees / 10; // 10% service fee
         gameFees.winnerReward = (gameFees.totalEntryFees * 9) / 10; // 90% of the total entryFees are the winnerReward
+        gameEnded = true;
         
-    return (address(0), gameFees.winnerReward = 0); // no winner found 
+    return (address(winner), gameFees.winnerReward); 
     } 
         /** If there are multiple players with the closest number, select a random winner among them. Here the hash function keccak256 
         is used to generate a pseudo-random number based on the current block timestamp and on the block bas fee. 
@@ -202,7 +209,8 @@ contract GAMEBC3 {
         to get an index within that range.**/
 
 
-    function claimReward() public payable {
+    /// @notice Allows the winner or the contract owner to claim their respective rewards.
+    function claimReward() public {
         
         require(gameEnded == true);
         require(msg.sender == winner || msg.sender == contractOwner, "Only winner or contract contractOwner can claim the reward");
@@ -225,6 +233,7 @@ contract GAMEBC3 {
         gameFees.serviceFee = 0;
     }
 
+    /// @notice Allows a player to leave the game before their number is revealed, refunding their entry fee.
     function leaveGame() public {
         require(hasPaid[msg.sender] == true);
         require(gameStarted == true, "You cannot get a refund before the game starts.");
@@ -242,6 +251,25 @@ contract GAMEBC3 {
         emit PlayerRefundClaimed(msg.sender, entryFee, block.timestamp);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
