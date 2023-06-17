@@ -3,7 +3,7 @@ pragma solidity >=0.4.22 <0.9.0;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract GAMEBC3 {
+contract GameBC3 {
     using SafeMath for uint256;
 
     // Constant variables
@@ -187,7 +187,7 @@ contract GAMEBC3 {
         }
             // If multiple winners, select one randomly
         if (closestPlayers.length > 1) {
-            uint256 randomWinnerIndex = uint256(keccak256(abi.encodePacked(block.timestamp, block.basefee))) % closestPlayers.length;
+            uint256 randomWinnerIndex = uint256(keccak256(abi.encodePacked(block.timestamp, block.number))) % closestPlayers.length;
             winner = closestPlayers[randomWinnerIndex];
         } else {
             winner = closestPlayers[0];

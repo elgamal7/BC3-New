@@ -1,0 +1,15 @@
+{
+  "author": "Fabian Jung, Jan Bittner",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "ethers": "^5.0.5",
+    "hardhat": "^2.14.0",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.2",
+    "dotenv": "^16.3.0",
+    "openzeppelin-solidity": "^4.2.0"
+  }
+}
