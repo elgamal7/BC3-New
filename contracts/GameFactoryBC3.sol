@@ -9,7 +9,7 @@ contract MyGameFactory {
     address[] public games;
 
     function createGame(address payable _contractOwner) external payable returns (address) {
-        address newGame = address(new MyGame(_contractOwner));
+        address newGame = address(MyGame(_contractOwner));
         games.push(newGame);
         return newGame;
     }
