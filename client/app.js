@@ -1,90 +1,52 @@
-// Replace with your GameFactory contract address and ABI
-import Web3 from "web3";
-import gamefactoryConfiguration from "../build/contracts/MyGameFactory.json";
-import gameConfiguration from "../build/contracts/MyGame.json";
+
+// Erstellen Sie eine neue Web3-Instanz
+const Web3 = require('web3');
+const web3 = new Web3(
+    new Web3.providers.WebsocketProvider(`wss://sepolia.infura.io/ws/v3/${infurakey}`)
+);
+const infurakey= "0012850e95e5451c960eaf0c7431d4bd"
 
 
+// Setzen Sie die Adressen und ABIs Ihrer Smart Contracts
+const gameFactoryAddress = 'Ihre GameFactory Adresse hier einfügen';
+const gameFactoryABI = 'Ihr GameFactory ABI hier einfügen';
+const gameABI = require("./GameBC3_ABI.json");
 
-// initialisiere Web3 Provider
-const web3 = new Web3(Web3.givenProvider || "http://localhost:7545");
+// Erstellen Sie neue Contract-Instanzen
+let gameFactory = new web3.eth.Contract(gameFactoryABI, gameFactoryAddress);
+let game;
 
-let metamaskAccount;
-let gameFactory;
+// Initialisieren Sie die Metamask-Konten
+let accounts;
+const initializeAccounts = async () => {
+    accounts = await web3.eth.getAccounts();
+};
+initializeAccounts();
 
-// initialisiere Web Elemente
-const gamefactoryText = document.getElementById("gamefactoryAddress");
-const accountText = document.getElementById("account");
-
-// initialisiere Web3 Schnittstellen
-const initializeWeb3 = async () => {
-
-  // initialisiere MetaMask Account
-  const accounts = await web3.eth.requestAccounts();
-  metamaskAccount = accounts[0];
-  accountText.innerText = 'MetaMask Account: ' + metamaskAccount;
-
-  // initialisiere GameFactory + Game Contract
-  const gameFactoryAddress = gamefactoryConfiguration.networks[5777].address;
-  const gameFactoryABI = gamefactoryConfiguration.abi;
-  gameFactory = new web3.eth.Contract(gameFactoryABI, gameFactoryAddress);
-  gameAbi = gameConfiguration.abi;
-  gamefactoryText.innerHTML = 'GameFactory Address: ' + gameFactoryAddress;
-}
-initializeWeb3();
-
-
-
-
-
-function show(elementId) {
-  document.getElementById(elementId).style.display = "block";
-}
-
-function hide(elementId) {
-  document.getElementById(elementId).style.display = "none";
-}
-
-document.getElementById("createForm").addEventListener("submit", async (event) => {
-  event.preventDefault(); // Prevent the default form submit behavior
+// EventListener für den "Join Game"-Button
+document.getElementById("joinGame").addEventListener("click", async () => {
+    await gameFactory.methods.joinGame().send({ from: accounts[0], value: web3.utils.toWei("0.1", "ether") });
 });
 
-document.getElementById("createGame").addEventListener("click", async () => {
-  const newGame = await gameFactory.methods.createGame(web3.utils.toWei("0.01", "ether"), 10).send({ from: accounts[0] });
-  const gameAddress = newGame.events.GameCreated.returnValues.game;
-
-  document.getElementById("gameAddressDisplay").textContent = gameAddress;
-
-  hide("createGame");
-  show("game");
+// EventListener für den "Commit Hash"-Button
+document.getElementById("commitHash").addEventListener("click", async () => {
+    const hash = document.getElementById("hashInput").value;
+    await gameFactory.methods.commitHash(hash).send({ from: accounts[0] });
 });
 
-document.getElementById("submitNumber").addEventListener("click", async () => {
-  const gameAddress = document.getElementById("gameAddressDisplay").textContent;
-  const number = document.getElementById("number").value;
-  const secret = document.getElementById("secret").value;
-  const commit = web3.utils.soliditySha3(number, secret);
-
-  const accounts = await web3.eth.getAccounts();
-  await new web3.eth.Contract(gameABI, gameAddress).methods.enterGame(commit).send({ from: accounts[0], value: web3.utils.toWei("0.01", "ether") });
+// EventListener für den "Reveal Number"-Button
+document.getElementById("revealNumber").addEventListener("click", async () => {
+    const number = document.getElementById("numberInput").value;
+    const salt = document.getElementById("saltInput").value;
+    await game.methods.revealNumber(number, salt).send({ from: accounts[0] });
 });
 
-document.getElementById("revealWinner").addEventListener("click", async () => {
-  const gameAddress = document.getElementById("gameAddressDisplay").textContent;
-  const number = document.getElementById("number").value;
-  const secret = document.getElementById("secret").value;
-
-  const accounts = await web3.eth.getAccounts();
-  await new web3.eth.Contract(gameABI, gameAddress).methods.revealNumber(number, secret).send({ from: accounts[0] });
-
-  const winner = await new web3.eth.Contract(gameABI, gameAddress).methods.getWinner().call();
-  document.getElementById("winner").textContent = winner;
-
-  show("winningMessage");
-  show("goBack");
+// EventListener für den "Claim Reward"-Button
+document.getElementById("claimReward").addEventListener("click", async () => {
+    await game.methods.claimReward().send({ from: accounts[0] });
 });
-document.getElementById("goBack").addEventListener("click", () => {
-  hide("game");
-  hide("winningMessage");
-  hide("goBack");
-  show("create-game");
+
+// EventListener für den "Leave Game"-Button
+document.getElementById("leaveGame").addEventListener("click", async () => {
+    await game.methods.leaveGame().send({ from: accounts[0] });
 });

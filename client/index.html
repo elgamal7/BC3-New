@@ -1,39 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Number Guessing Game</title>
+    <title>Game BC3</title>
+    <script src="app.js" type="module"></script>
 </head>
 <body>
+    <h1>Game BC3</h1>
 
-    <p id="gamefactoryAddress"> </p>
-    <p id="account"></p>
-    <div id="create-game">
-        <h1>Create a new game</h1>
-        <form id="createForm">
-            <button type="submit" id="createGame">Create Game</button>
-        </form>
+    <div>
+        <h2>Join Game</h2>
+        <button id="joinGame">Join Game</button>
     </div>
 
-    <div id="game" style="display: none;">
-        <h1>Game</h1>
-        <p>Game Address: <span id="gameAddressDisplay"></span></p>
-        <input type="number" id="number" placeholder="Enter your number">
-        <input type="text" id="secret" placeholder="Enter your secret">
-        <button id="submitNumber">Submit Number</button>
-        <button id="revealWinner">Reveal Winner</button>
+    <div>
+        <h2>Commit Hash</h2>
+        <input type="text" id="hashInput" placeholder="Enter your hash">
+        <button id="commitHash">Commit Hash</button>
     </div>
 
-    <div id="winningMessage" style="display: none;">
-        <h2>The winner is: <span id="winner"></span></h2>
+    <div>
+        <h2>Reveal Number</h2>
+        <input type="number" id="numberInput" placeholder="Enter your number">
+        <input type="text" id="saltInput" placeholder="Enter your salt">
+        <button id="revealNumber">Reveal Number</button>
     </div>
 
-    <div id="goBack" style="display: none;">
-        <button>Go Back</button>
+    <div>
+        <h2>Claim Reward</h2>
+        <button id="claimReward">Claim Reward</button>
     </div>
 
-    <script type="module" src="app.js"></script>
-
+    <div>
+        <h2>Leave Game</h2>
+        <button id="leaveGame">Leave Game</button>
+    </div>
 </body>
 </html>

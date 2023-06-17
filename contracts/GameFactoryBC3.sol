@@ -8,10 +8,10 @@ import "./GameBC3.sol";
 contract MyGameFactory {
     address[] public games;
 
-    function createGame(address payable _contractOwner) external payable returns (address) {
-        address newGame = address(MyGame(_contractOwner));
-        games.push(newGame);
-        return newGame;
+    function createGame() external payable returns (address) {
+        GAMEBC3 newGame = new GAMEBC3();
+        games.push(address(newGame));
+        return address(newGame);
     }
 
     function getGames() external view returns (address[] memory) {
