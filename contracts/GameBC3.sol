@@ -19,7 +19,6 @@ contract GameBC3 {
     uint256 public gameCountdownStartTime;
     uint256 public revealPhaseStartTime;
     uint256 public numberJoinedPlayers = 0;
-    uint256 public numberPlayersWithHash = 0;
     uint256 public playersWithHash = 0;
     bool public gameStarted = false;
     bool public gameEnded = false;
@@ -176,7 +175,7 @@ contract GameBC3 {
                 }
             }
         }
-       
+
         // If multiple winners, select one randomly
         if (closestPlayers.length > 1) {
             uint256 randomWinnerIndex = uint256(keccak256(abi.encodePacked(block.timestamp, block.number))) %
@@ -195,14 +194,14 @@ contract GameBC3 {
     }
 
     /** If there are multiple players with the closest number, select a random winner among them. Here the hash function keccak256 
-        is used to generate a pseudo-random number based on the current block timestamp and on the block bas fee. 
+        is used to generate a pseudo-random number based on the current block timestamp and on the block number. 
         These two values are first combined using the abi.encodePacked() function to generate a byte array, 
-        which is passed as an argument to keccak256(). The result is then cast into a uint256 variable and counted using the 
-        modulo operator % by count to generate the random index value. Since the hash value is a pseudo-random number 
+        which is passed as an argument to keccak256(). The result is then cast into a uint256 variable and counted with the 
+        Modulo operator % by the number of players with the closet number to get the random winner index value. Since the hash value is a pseudo-random number 
         between 0 and 2^256 - 1. It is taken modulo the number of players with the closest number to the two-thirds average, 
         to get an index within that range.**/
 
-    /// @notice Allows the winner or the contract owner to claim their respective rewards.
+    /// @notice Allows the winner or the contract owner to claim their rewards.
     function claimReward() private {
         require(gameEnded == true);
         require(gameFees.winnerReward > 0, "The winner reward has already been claimed");
@@ -222,13 +221,13 @@ contract GameBC3 {
         require(hasPaidEntryFee[msg.sender], "You haven't joined the game yet");
         require(!playerHasRevealed[msg.sender], "You have revealed a number, you cannot claim a refund");
 
-        // Reset the mappings for the player's address
+        // Resets the mappings for the player's address
         hasPaidEntryFee[msg.sender] = false;
         playerCommitments[msg.sender] = bytes32(0);
         revealedNumbers[msg.sender] = 0;
         playerHasRevealed[msg.sender] = false;
 
-        // Refund their entry fee
+        // Refunds their entry fee
         payable(msg.sender).transfer(entryFee);
 
         emit PlayerRefundClaimed(msg.sender, entryFee, block.timestamp);
