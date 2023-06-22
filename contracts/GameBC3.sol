@@ -67,10 +67,6 @@ contract GameBC3 {
         _;
     }
 
-    // modifier gameStarted {
-    //     require(gameStarted == false, "This game has already started!");
-    //     _;
-    // }
 
     /// @notice Allows a player to join the game after paying the entry fee.
     function joinGame() public payable {
