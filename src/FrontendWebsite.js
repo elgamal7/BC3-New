@@ -94,14 +94,11 @@ const FrontendWebsite = () => {
         )}
       </button>
 
-      <button id="publish" onClick={onUpdatePressed}>         
-      Get Games
-        </button> <button id="publish" onClick={onUpdatePressed}>         
-      Start Game
-        </button>
-
+    
         <button id="publish" onClick={onUpdatePressed}>         
       Start Game
+        </button><button id="publish" onClick={onUpdatePressed}>         
+      Get Games
         </button>
 
       <h2 style={{ paddingTop: "50px" }}>Current Message:</h2>
@@ -118,9 +115,10 @@ const FrontendWebsite = () => {
         />
         <p id="status">{status}</p>
 
-        <button id="publish" onClick={onUpdatePressed}>
-          Update
-        </button>
+        
+
+
+
       </div>
     </div>
   );
