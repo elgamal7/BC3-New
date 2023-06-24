@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <!-- web3.js is eine Conveniance-Library, die die RPC-Aufrufe wrappt -->
+
+    <script>
+
+        window.addEventListener("load", (event) => 
+            if (window.ethereum) {
+                contractAddress = "0xCC8456f29C95882b9Ad5d1Bd7D8E1174793c668D";
+
+                var sender
+                ethereum.request({ method: 'eth_requestAccounts' }).then(function (res) {
+                    sender = res[0];
+                    accounts = res;
+                    document.getElementById("sender").innerHTML = sender;
+                    window.web3 = new Web3(window.ethereum);
+                    document.getElementById("sender").innerHTML = sender;
+
+                    window.ethereum.on('accountsChanged', function (accounts) {
+                        sender = accounts[0];
+                        document.getElementById("sender").innerHTML = sender;
+                    });
+
+                    // ABI STP Contract
+                    var abi_factory = [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_template",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "gameAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "creator",
+          "type": "address"
+        }
+      ],
+      "name": "GameCreated",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "createGame",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "games",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getGames",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "template",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+                        
+                     // ABI Game Contract
+                    var abi_game = [
+    {
+
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "WinnerAddress",
+          "type": "address"
+        }
+      ],
+      "name": "GameEnded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "GameStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "playerAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "commitment",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "PlayerCommitted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "playerAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "PlayerRefundClaimed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "playerAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "PlayerRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "playerAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "number",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "PlayerRevealed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "RevealPhaseStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "winner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "rewardAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "RewardRecorded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "contractOwner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "feeAmount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "ServiceFeeRecorded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "recipient",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "Withdrawal",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "closestPlayers",
+      "outputs": [
+        {
+          "internalType": "address payable",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "_hash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "commitHash",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "contractOwner",
+      "outputs": [
+        {
+          "internalType": "address payable",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "countdown",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "determineWinner",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "entryFee",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gameEnded",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gameFees",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "totalEntryFees",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "serviceFee",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "winnerReward",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gameStarted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "hasPaidEntryFee",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "leaveGame",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "maxNumberOfPlayers",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "minNumberOfPlayers",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "numberJoinedPlayers",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "pendingWithdrawals",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "playerCommitments",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "playerHasRevealed",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "playersWhoHaveRevealed",
+      "outputs": [
+        {
+          "internalType": "address payable",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_number",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_salt",
+          "type": "string"
+        }
+      ],
+      "name": "revealNumber",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "revealPhase",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "revealPhaseStartTime",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "startRevealPhase",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+                        
+
+                    var contract_factory = new web3.eth.Contract(abi_factory, contractAddress);
+
+        //             document.getElementById("btn_register").addEventListener("click", (e) => {
+        //                 // Spieler 1 registriert ein Spiel
+        //                 // übergibt den Wetteinsatz und zahlt 500 Wei Servicegebühr
+        //                 var bet_einheit = document.getElementById("einheit_bet").value;
+        //                 var bet = web3.utils.toWei(document.getElementById("ed_bet").value, bet_einheit);
+
+        //                 var value_einheit = document.getElementById("einheit_betrag").value;
+        //                 var value = web3.utils.toWei(document.getElementById("ed_value").value, value_einheit);
+
+                         contract_factory.methods.registerGame(bet).send({ from: sender, value: value }).then(function (err, res) {
+                             document.getElementById("ed_status").value = "Spiel registriert!";
+                         });
+        //             });
+
+        //             document.getElementById("btn_unregister").addEventListener("click", (e) => {
+        //                 contract_factory.methods.unregisterGame().send({ from: sender }).then(function (res) {
+        //                     document.getElementById("ed_status").value = "Spiel abgemeldet!";
+        //                 });
+        //             });
+
+        //             document.getElementById("btn_join").addEventListener("click", (e) => {
+        //                 var address = document.getElementById("ed_addressenemy").value;
+
+        //                 var value_einheit = document.getElementById("einheit_betrag").value;
+        //                 var value = web3.utils.toWei(document.getElementById("ed_value").value, value_einheit);
+
+        //                 contract_factory.methods.joinGame(address).send({ from: sender, value: value }).then(function (res) {
+        //                     document.getElementById("ed_status").value = "Spiel beigetreten!";
+        //                 });
+        //             });
+
+        //             var contract_game;
+
+        //             document.getElementById("btn_arenaladen").addEventListener("click", (e) => {
+        //                 var address_creator = document.getElementById("ed_addressersteller").value;
+
+        //                 var address_contract;
+        //                 // So kann man public Variablen aufrufen
+        //                 contract_factory.methods.games(address_creator).call(function (err, res) {
+        //                     address_contract = res;
+        //                     document.getElementById("ed_status").value = "Arena geladen: " + address_contract;
+        //                     contract_game = new web3.eth.Contract(abi_game, address_contract);
+        //                 });
+        //             });
+
+
+        //             document.getElementById("btn_submithash").addEventListener("click", async (e) => {
+
+        //                 var wahl = document.getElementById("wahl").value;
+        //                 var passwort = document.getElementById("ed_password").value;
+
+        //                 const msgUint8 = new TextEncoder().encode(wahl + passwort);                   // encode as (utf-8) Uint8Array
+        //                 const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);           // hash the message
+        //                 const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+        //                 const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');    // convert bytes to hex string
+
+        //                 var value_einheit = document.getElementById("einheit_betrag").value;
+        //                 var value = web3.utils.toWei(document.getElementById("ed_value").value, value_einheit);
+
+        //                 // Der spieler muss hier die bet mit überweisen
+
+        //                 contract_game.methods.submitHash("0x" + hash).send({ from: sender, value: value }).then(function (res) {
+        //                     document.getElementById("ed_status").value = "Hash submitted!";
+        //                 });
+        //             });
+
+        //             document.getElementById("btn_reveal").addEventListener("click", async (e) => {
+
+        //                 var wahl = document.getElementById("wahl").value;
+        //                 var passwort = document.getElementById("ed_password").value;
+
+        //                 contract_game.methods.reveal(wahl, passwort).send({ from: sender }).then(function (res) {
+        //                     document.getElementById("ed_status").value = "Wahl veröffentlicht!";
+        //                 });
+        //             });
+
+        //             document.getElementById("btn_hashspieler1").addEventListener("click", (e) => {
+        //                 contract_game.methods.player1ChoiceHash().call(function (err, res) {
+        //                     document.getElementById("ed_hashspieler1").value = res;
+        //                 });
+        //             });
+
+        //             document.getElementById("btn_hashspieler2").addEventListener("click", (e) => {
+        //                 contract_game.methods.player2ChoiceHash().call(function (err, res) {
+        //                     document.getElementById("ed_hashspieler2").value = res;
+        //                 });
+        //             });
+
+        //             document.getElementById("btn_wahlspieler1").addEventListener("click", (e) => {
+        //                 contract_game.methods.player1Choice().call(function (err, res) {
+        //                     console.log(res);
+        //                     document.getElementById("ed_wahlspieler1").value = res;
+        //                 });
+        //             });
+
+        //             document.getElementById("btn_wahlspieler2").addEventListener("click", (e) => {
+        //                 contract_game.methods.player2Choice().call(function (err, res) {
+        //                     document.getElementById("ed_wahlspieler2").value = res;
+        //                 });
+        //             });
+
+
+        //             document.getElementById("btn_checkwinner").addEventListener("click", (e) => {
+
+        //                 contract_game.methods.checkWinner().send({ from: sender }).then(function (res) {
+        //                     contract_game.methods.winner().call(function (err, res) {
+        //                         var winner;
+        //                         if (res == 1) 
+        //                             winner = "Player 1 hat gewonnen! Glückwunsch!";
+        //                         else if (res == 2) 
+        //                             winner = "Player 2 hat gewonnen! Glückwunsch!";
+        //                         else 
+        //                             winner = "Unentschieden! Play again!";
+                                
+
+        //                         document.getElementById("winner").innerHTML = winner;
+        //                     });
+        //                 })
+
+        //             });
+
+        //             document.getElementById("btn_clean").addEventListener("click", (e) => {
+
+        //                 contract_game.methods.clean().send({ from: sender }).then(function (res) {
+        //                     document.getElementById("clean").innerHTML = "Game Contract erfolgreich gelöscht! Viel Spaß beim nächsten Spiel! :)";
+        //                 });
+
+        //             });
+
+        //             // Get balance of STP contract (for Owner)
+        //             document.getElementById("btn_balance").addEventListener("click", (e) => {
+        //                 contract_factory.methods.getBalance().call(function (err, res) {
+        //                     document.getElementById("ed_balance").value = res;
+        //                     document.getElementById("ed_status").value = "Im STP Contract befinden sich " + res + " wei.";
+        //                 })
+
+        //             });
+
+        //             // Geld abheben von STP contract -> die gesammelten Servicegebühren (for Owner)
+        //             document.getElementById("btn_withdraw").addEventListener("click", (e) => {
+
+        //                 var value = document.getElementById("ed_withdraw").value;
+        //                 contract_factory.methods.withdrawFees(value).send({ from: sender }).then(function (res) {
+        //                     document.getElementById("ed_status").value = "Owner hat " + value + " wei abgehoben.";
+        //                 });
+        //             });
+
+
+
+        //         });
+        //     } else {
+        //         return false;
+        //     }
+
+
+        // })
+
+
+    </script>
+</head>
+
+<body>
+    <h1>Schere Stein Papier</h1>
+
+    <h2> Informationsbereich </h2>
+
+    <div id=</div>Aktueller Account: </div>
+    <div id="sender"></div>
+
+    <br>
+
+    <label for="text">Spiel registrieren = Spieler 1 | Spiel beitreten = Spieler 2 </label>
+
+    <br>
+    <br>
+
+    <label for="text"> Betrag: </label>
+    <input type="text" id="ed_value" placeholder="Transaktionsbetrag">
+    <select id="einheit_betrag" name="einheit_betrag">
+        <option value="wei"> wei </option>
+        <option value="gwei"> gwei </option>
+        <option value="finney"> finney </option>
+        <option value="ether"> ether </option>
+    </select>
+
+    <br>
+    <br>
+
+    <label for="text"> Status: </label>
+    <input type="text" id="ed_status" placeholder="Hier erscheinen Statusmeldungen & Fehlermeldungen" size="100"
+        readonly>
+
+    <h2> Anmeldebereich </h2>
+
+    <label for="text"> Spiel registrieren: </label>
+    <input type="text" id="ed_bet" placeholder="Wetteinsatz">
+    <select id="einheit_bet" name="einheit_bet">
+        <option value="wei"> wei </option>
+        <option value="gwei"> gwei </option>
+        <option value="finney"> finney </option>
+        <option value="ether"> ether </option>
+    </select>
+    <button type="button" id="btn_register"> Registrieren </button>
+    <br>
+    <button type="button" id="btn_unregister"> Abmelden </button>
+
+    <br>
+    <br>
+
+    <label for="text"> Spiel beitreten: </label>
+    <input type="text" id="ed_addressenemy" placeholder="Adresse Gegenspieler" size="50">
+    <button type="button" id="btn_join"> Join </button>
+
+    <h2> Arenabereich </h2>
+
+    <label for="text"> Arena laden: </label>
+    <input type="text" id="ed_addressersteller" placeholder="Adresse Spielersteller" size="50">
+    <button type="button" id="btn_arenaladen"> Arena laden </button>
+
+    <h4> Eingabe </h4>
+
+
+    <label for="wahl">Wahl:</label>
+    <select id="wahl" name="wahl">
+        <option value="schere"> Schere </option>
+        <option value="stein"> Stein </option>
+        <option value="papier"> Papier </option>
+    </select>
+
+    <label for="wahl">Passwort:</label>
+    <input type="text" id="ed_password" placeholder="Passwort" size="50">
+
+    <br>
+
+    <button type="button" id="btn_submithash">Submit Hash</button>
+
+    <br>
+
+    <button type="button" id="btn_reveal">Wahl veröffentlichen</button>
+
+    <br>
+    <br>
+
+    <h4> Werte abfragen </h4>
+
+    <button type="button" id="btn_hashspieler1"> Zeige Hash Spieler 1 </button>
+    <input type="text" id="ed_hashspieler1" placeholder="Hash Spieler 1" size="80" readonly>
+
+    <br>
+
+    <button type="button" id="btn_hashspieler2"> Zeige Hash Spieler 2 </button>
+    <input type="text" id="ed_hashspieler2" placeholder="Hash Spieler 2" size="80" readonly>
+
+    <br>
+    <br>
+
+    <button type="button" id="btn_wahlspieler1"> Zeige Wahl Spieler 1 </button>
+    <input type="text" id="ed_wahlspieler1" placeholder="Wahl Spieler 1" readonly>
+
+    <br>
+
+    <button type="button" id="btn_wahlspieler2"> Zeige Wahl Spieler 2 </button>
+    <input type="text" id="ed_wahlspieler2" placeholder="Wahl Spieler 2" readonly>
+
+    <br>
+    <br>
+
+    <button type="button" id="btn_checkwinner" size="50"> Check Winner </button>
+    <div id="winner"></div>
+
+    <button type="button" id="btn_clean"> Aufräumen </button>
+    <div id="clean"></div>
+
+    <h2> Adminbereich </h2>
+
+    <button type="button" id="btn_balance"> Balance Contract </button>
+    <input type="text" id="ed_balance" placeholder="Balance">
+
+    <br>
+
+    <button type="button" id="btn_withdraw"> Geld abheben </button>
+    <input type="text" id="ed_withdraw" placeholder="Menge in wei">
+
+    <!-- Hier steht ein Kommentar -->
+
+
+</body>
+                }
+            
+</html>
