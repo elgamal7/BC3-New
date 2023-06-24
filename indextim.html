@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <!-- web3.js is eine Conveniance-Library, die die RPC-Aufrufe wrappt -->
+
+    <script>
+
+        window.addEventListener("load", (event) => {
+            if (window.ethereum) {
+                contractAddress = "0xa34C22855fEf7D4B4bc9671b4AE9DA3DaAb66530";
+
+                var sender
+                ethereum.request({ method: 'eth_requestAccounts' }).then(function (res) {
+                    sender = res[0];
+                    accounts = res;
+                    document.getElementById("sender").innerHTML = sender;
+                    window.web3 = new Web3(window.ethereum);
+                    document.getElementById("sender").innerHTML = sender;
+
+                    window.ethereum.on('accountsChanged', function (accounts) {
+                        sender = accounts[0];
+                        document.getElementById("sender").innerHTML = sender;
+                    });
+
+                    // ABI STP Contract
+                    var abi_stp = [
+                        {
+                            "constant": true,
+                            "inputs": [
+                                {
+                                    "name": "",
+                                    "type": "address"
+                                }
+                            ],
+                            "name": "queue",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "getBalance",
+                            "outputs": [
+                                {
+                                    "name": "balance",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [],
+                            "name": "unregisterGame",
+                            "outputs": [],
+                            "payable": false,
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [
+                                {
+                                    "name": "enemy",
+                                    "type": "address"
+                                }
+                            ],
+                            "name": "joinGame",
+                            "outputs": [],
+                            "payable": true,
+                            "stateMutability": "payable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [
+                                {
+                                    "name": "bet",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "name": "registerGame",
+                            "outputs": [],
+                            "payable": true,
+                            "stateMutability": "payable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [
+                                {
+                                    "name": "amount",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "name": "withdrawFees",
+                            "outputs": [],
+                            "payable": false,
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [
+                                {
+                                    "name": "",
+                                    "type": "address"
+                                }
+                            ],
+                            "name": "games",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "address"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [
+                                {
+                                    "name": "game_creator",
+                                    "type": "address"
+                                }
+                            ],
+                            "name": "getGame",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "address"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "owner",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "address"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "inputs": [
+                                {
+                                    "name": "_gameContract",
+                                    "type": "address"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "nonpayable",
+                            "type": "constructor"
+                        },
+                        {
+                            "payable": true,
+                            "stateMutability": "payable",
+                            "type": "fallback"
+                        },
+                        {
+                            "anonymous": false,
+                            "inputs": [
+                                {
+                                    "indexed": false,
+                                    "name": "player1",
+                                    "type": "address"
+                                },
+                                {
+                                    "indexed": false,
+                                    "name": "player2",
+                                    "type": "address"
+                                },
+                                {
+                                    "indexed": false,
+                                    "name": "bet",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "name": "GameCreated",
+                            "type": "event"
+                        }
+                    ]
+
+                    // ABI Game Contract
+                    var abi_game = [
+                        {
+                            "constant": false,
+                            "inputs": [
+                                {
+                                    "name": "hash",
+                                    "type": "bytes32"
+                                }
+                            ],
+                            "name": "submitHash",
+                            "outputs": [],
+                            "payable": true,
+                            "stateMutability": "payable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "player2Choice",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "string"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "bet",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "player2ChoiceHash",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "bytes32"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "player1ChoiceHash",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "bytes32"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [
+                                {
+                                    "name": "_player1",
+                                    "type": "address"
+                                },
+                                {
+                                    "name": "_player2",
+                                    "type": "address"
+                                },
+                                {
+                                    "name": "_bet",
+                                    "type": "uint256"
+                                },
+                                {
+                                    "name": "_stp",
+                                    "type": "address"
+                                }
+                            ],
+                            "name": "init",
+                            "outputs": [],
+                            "payable": false,
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [
+                                {
+                                    "name": "choice",
+                                    "type": "string"
+                                },
+                                {
+                                    "name": "salt",
+                                    "type": "string"
+                                }
+                            ],
+                            "name": "reveal",
+                            "outputs": [],
+                            "payable": false,
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [],
+                            "name": "checkWinner",
+                            "outputs": [],
+                            "payable": false,
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "revealTime",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "uint256"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "player1Choice",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "string"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": true,
+                            "inputs": [],
+                            "name": "winner",
+                            "outputs": [
+                                {
+                                    "name": "",
+                                    "type": "int256"
+                                }
+                            ],
+                            "payable": false,
+                            "stateMutability": "view",
+                            "type": "function"
+                        },
+                        {
+                            "constant": false,
+                            "inputs": [],
+                            "name": "clean",
+                            "outputs": [],
+                            "payable": false,
+                            "stateMutability": "nonpayable",
+                            "type": "function"
+                        }
+                    ]
+
+                    var contract_stp = new web3.eth.Contract(abi_stp, contractAddress);
+
+                    document.getElementById("btn_register").addEventListener("click", (e) => {
+                        // Spieler 1 registriert ein Spiel
+                        // übergibt den Wetteinsatz und zahlt 500 Wei Servicegebühr
+                        var bet_einheit = document.getElementById("einheit_bet").value;
+                        var bet = web3.utils.toWei(document.getElementById("ed_bet").value, bet_einheit);
+
+                        var value_einheit = document.getElementById("einheit_betrag").value;
+                        var value = web3.utils.toWei(document.getElementById("ed_value").value, value_einheit);
+
+                        contract_stp.methods.registerGame(bet).send({ from: sender, value: value }).then(function (err, res) {
+                            document.getElementById("ed_status").value = "Spiel registriert!";
+                        });
+                    });
+
+                    document.getElementById("btn_unregister").addEventListener("click", (e) => {
+                        contract_stp.methods.unregisterGame().send({ from: sender }).then(function (res) {
+                            document.getElementById("ed_status").value = "Spiel abgemeldet!";
+                        });
+                    });
+
+                    document.getElementById("btn_join").addEventListener("click", (e) => {
+                        var address = document.getElementById("ed_addressenemy").value;
+
+                        var value_einheit = document.getElementById("einheit_betrag").value;
+                        var value = web3.utils.toWei(document.getElementById("ed_value").value, value_einheit);
+
+                        contract_stp.methods.joinGame(address).send({ from: sender, value: value }).then(function (res) {
+                            document.getElementById("ed_status").value = "Spiel beigetreten!";
+                        });
+                    });
+
+                    var contract_game;
+
+                    document.getElementById("btn_arenaladen").addEventListener("click", (e) => {
+                        var address_creator = document.getElementById("ed_addressersteller").value;
+
+                        var address_contract;
+                        // So kann man public Variablen aufrufen
+                        contract_stp.methods.games(address_creator).call(function (err, res) {
+                            address_contract = res;
+                            document.getElementById("ed_status").value = "Arena geladen: " + address_contract;
+                            contract_game = new web3.eth.Contract(abi_game, address_contract);
+                        });
+                    });
+
+
+                    document.getElementById("btn_submithash").addEventListener("click", async (e) => {
+
+                        var wahl = document.getElementById("wahl").value;
+                        var passwort = document.getElementById("ed_password").value;
+
+                        const msgUint8 = new TextEncoder().encode(wahl + passwort);                   // encode as (utf-8) Uint8Array
+                        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);           // hash the message
+                        const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+                        const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');    // convert bytes to hex string
+
+                        var value_einheit = document.getElementById("einheit_betrag").value;
+                        var value = web3.utils.toWei(document.getElementById("ed_value").value, value_einheit);
+
+                        // Der spieler muss hier die bet mit überweisen
+
+                        contract_game.methods.submitHash("0x" + hash).send({ from: sender, value: value }).then(function (res) {
+                            document.getElementById("ed_status").value = "Hash submitted!";
+                        });
+                    });
+
+                    document.getElementById("btn_reveal").addEventListener("click", async (e) => {
+
+                        var wahl = document.getElementById("wahl").value;
+                        var passwort = document.getElementById("ed_password").value;
+
+                        contract_game.methods.reveal(wahl, passwort).send({ from: sender }).then(function (res) {
+                            document.getElementById("ed_status").value = "Wahl veröffentlicht!";
+                        });
+                    });
+
+                    document.getElementById("btn_hashspieler1").addEventListener("click", (e) => {
+                        contract_game.methods.player1ChoiceHash().call(function (err, res) {
+                            document.getElementById("ed_hashspieler1").value = res;
+                        });
+                    });
+
+                    document.getElementById("btn_hashspieler2").addEventListener("click", (e) => {
+                        contract_game.methods.player2ChoiceHash().call(function (err, res) {
+                            document.getElementById("ed_hashspieler2").value = res;
+                        });
+                    });
+
+                    document.getElementById("btn_wahlspieler1").addEventListener("click", (e) => {
+                        contract_game.methods.player1Choice().call(function (err, res) {
+                            console.log(res);
+                            document.getElementById("ed_wahlspieler1").value = res;
+                        });
+                    });
+
+                    document.getElementById("btn_wahlspieler2").addEventListener("click", (e) => {
+                        contract_game.methods.player2Choice().call(function (err, res) {
+                            document.getElementById("ed_wahlspieler2").value = res;
+                        });
+                    });
+
+
+                    document.getElementById("btn_checkwinner").addEventListener("click", (e) => {
+
+                        contract_game.methods.checkWinner().send({ from: sender }).then(function (res) {
+                            contract_game.methods.winner().call(function (err, res) {
+                                var winner;
+                                if (res == 1) 
+                                    winner = "Player 1 hat gewonnen! Glückwunsch!";
+                                else if (res == 2) 
+                                    winner = "Player 2 hat gewonnen! Glückwunsch!";
+                                else 
+                                    winner = "Unentschieden! Play again!";
+                                
+
+                                document.getElementById("winner").innerHTML = winner;
+                            });
+                        })
+
+                    });
+
+                    document.getElementById("btn_clean").addEventListener("click", (e) => {
+
+                        contract_game.methods.clean().send({ from: sender }).then(function (res) {
+                            document.getElementById("clean").innerHTML = "Game Contract erfolgreich gelöscht! Viel Spaß beim nächsten Spiel! :)";
+                        });
+
+                    });
+
+                    // Get balance of STP contract (for Owner)
+                    document.getElementById("btn_balance").addEventListener("click", (e) => {
+                        contract_stp.methods.getBalance().call(function (err, res) {
+                            document.getElementById("ed_balance").value = res;
+                            document.getElementById("ed_status").value = "Im STP Contract befinden sich " + res + " wei.";
+                        })
+
+                    });
+
+                    // Geld abheben von STP contract -> die gesammelten Servicegebühren (for Owner)
+                    document.getElementById("btn_withdraw").addEventListener("click", (e) => {
+
+                        var value = document.getElementById("ed_withdraw").value;
+                        contract_stp.methods.withdrawFees(value).send({ from: sender }).then(function (res) {
+                            document.getElementById("ed_status").value = "Owner hat " + value + " wei abgehoben.";
+                        });
+                    });
+
+
+
+                });
+            } else {
+                return false;
+            }
+
+
+        })
+
+
+    </script>
+</head>
+
+<body>
+    <h1>Schere Stein Papier</h1>
+
+    <h2> Informationsbereich </h2>
+
+    <div id=>Aktueller Account: </div>
+    <div id="sender"></div>
+
+    <br>
+
+    <label for="text">Spiel registrieren = Spieler 1 | Spiel beitreten = Spieler 2 </label>
+
+    <br>
+    <br>
+
+    <label for="text"> Betrag: </label>
+    <input type="text" id="ed_value" placeholder="Transaktionsbetrag">
+    <select id="einheit_betrag" name="einheit_betrag">
+        <option value="wei"> wei </option>
+        <option value="gwei"> gwei </option>
+        <option value="finney"> finney </option>
+        <option value="ether"> ether </option>
+    </select>
+
+    <br>
+    <br>
+
+    <label for="text"> Status: </label>
+    <input type="text" id="ed_status" placeholder="Hier erscheinen Statusmeldungen & Fehlermeldungen" size="100"
+        readonly>
+
+    <h2> Anmeldebereich </h2>
+
+    <label for="text"> Spiel registrieren: </label>
+    <input type="text" id="ed_bet" placeholder="Wetteinsatz">
+    <select id="einheit_bet" name="einheit_bet">
+        <option value="wei"> wei </option>
+        <option value="gwei"> gwei </option>
+        <option value="finney"> finney </option>
+        <option value="ether"> ether </option>
+    </select>
+    <button type="button" id="btn_register"> Registrieren </button>
+    <br>
+    <button type="button" id="btn_unregister"> Abmelden </button>
+
+    <br>
+    <br>
+
+    <label for="text"> Spiel beitreten: </label>
+    <input type="text" id="ed_addressenemy" placeholder="Adresse Gegenspieler" size="50">
+    <button type="button" id="btn_join"> Join </button>
+
+    <h2> Arenabereich </h2>
+
+    <label for="text"> Arena laden: </label>
+    <input type="text" id="ed_addressersteller" placeholder="Adresse Spielersteller" size="50">
+    <button type="button" id="btn_arenaladen"> Arena laden </button>
+
+    <h4> Eingabe </h4>
+
+
+    <label for="wahl">Wahl:</label>
+    <select id="wahl" name="wahl">
+        <option value="schere"> Schere </option>
+        <option value="stein"> Stein </option>
+        <option value="papier"> Papier </option>
+    </select>
+
+    <label for="wahl">Passwort:</label>
+    <input type="text" id="ed_password" placeholder="Passwort" size="50">
+
+    <br>
+
+    <button type="button" id="btn_submithash">Submit Hash</button>
+
+    <br>
+
+    <button type="button" id="btn_reveal">Wahl veröffentlichen</button>
+
+    <br>
+    <br>
+
+    <h4> Werte abfragen </h4>
+
+    <button type="button" id="btn_hashspieler1"> Zeige Hash Spieler 1 </button>
+    <input type="text" id="ed_hashspieler1" placeholder="Hash Spieler 1" size="80" readonly>
+
+    <br>
+
+    <button type="button" id="btn_hashspieler2"> Zeige Hash Spieler 2 </button>
+    <input type="text" id="ed_hashspieler2" placeholder="Hash Spieler 2" size="80" readonly>
+
+    <br>
+    <br>
+
+    <button type="button" id="btn_wahlspieler1"> Zeige Wahl Spieler 1 </button>
+    <input type="text" id="ed_wahlspieler1" placeholder="Wahl Spieler 1" readonly>
+
+    <br>
+
+    <button type="button" id="btn_wahlspieler2"> Zeige Wahl Spieler 2 </button>
+    <input type="text" id="ed_wahlspieler2" placeholder="Wahl Spieler 2" readonly>
+
+    <br>
+    <br>
+
+    <button type="button" id="btn_checkwinner" size="50"> Check Winner </button>
+    <div id="winner"></div>
+
+    <button type="button" id="btn_clean"> Aufräumen </button>
+    <div id="clean"></div>
+
+    <h2> Adminbereich </h2>
+
+    <button type="button" id="btn_balance"> Balance Contract </button>
+    <input type="text" id="ed_balance" placeholder="Balance">
+
+    <br>
+
+    <button type="button" id="btn_withdraw"> Geld abheben </button>
+    <input type="text" id="ed_withdraw" placeholder="Menge in wei">
+
+    <!-- Hier steht ein Kommentar -->
+
+
+</body>
+
+</html>

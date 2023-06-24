@@ -1,0 +1,215 @@
+<html>
+
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+
+    <script>
+        const contractAddress_game = "0x3A1B0389eb69BC362257348F2449Df3536044a60";
+        const contractAddress = "0xCC8456f29C95882b9Ad5d1Bd7D8E1174793c668D";
+        let web3
+        let contract
+        let contract_game
+
+        async function enable() {
+            if (window.ethereum) {
+                ethereum.request({ method: 'eth_requestAccounts' }).then(function (res) {
+                    account = res[0]
+                    console.log('Connected Account: ' + account);
+                    web3 = new Web3(window.ethereum);
+                    document.getElementById("metamask").innerHTML = "Metamask is enabled!\n Connected Account: " + account;
+                    
+                    let abi = getAbi();
+                    
+                    
+                    
+                    
+                    contract = new web3.eth.Contract(abi, contractAddress);
+                    console.log(contract)
+                    contract_game = new web3.eth.Contract(abi_game, contractAddress_game)
+                    console.log(contract_game)
+
+                    // contract objekt erstellen
+                    // let abi = getAbi(); // die Funktion gibt die ABI zurück
+                    //contract = new web3.eth.Contract(abi, contractAddress);
+
+                })
+
+            }
+        }
+
+        async function getBalanceETH() {
+
+            let balanceWei = await web3.eth.getBalance(account);
+            let balance = web3.utils.fromWei(balanceWei, 'ether');
+            document.getElementById("balanceEth").innerHTML = "Balance ETH: " + balance + " ETH";
+
+        }
+
+    
+
+        async function sendTransaction() {
+            
+            // contract aufrufen
+            // siehe: https://web3js.readthedocs.io/en/v1.2.11/web3-eth-contract.html
+            // let tx = await contract.methods.METHOD_NAME(PARAMETER).send({ from: account, value:contract_st VALUE });
+
+        }
+
+
+        function getAbi() {
+
+        }
+        function getAbi() {
+            // return ABI
+            return [
+     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_template",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "gameAddress",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "creator",
+          "type": "address"
+        }
+      ],
+      "name": "GameCreated",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "createGame",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "games",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getGames",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "template",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}
+        async function createGame() {
+            let tx = await contract.methods.createGame().send({ from: account });
+            console.log("create game")
+            document.getElementById("gamecreated").innerHTML = tx;
+        }
+        async function getGames() {
+            let tx = await contract.methods.getGames().send({ from: account });
+            console.log("join game")
+            document.getElementById("getGames").innerHTML = tx;
+        }
+
+    </script>
+</head>
+
+<body>
+    <h1>2/3 Blockchain3Game</h1>
+    <h2>Connect Metamask</h2>
+    <button class="button" type="button" onclick="enable()">Enable MetaMask</button>
+    <p id="metamask"></p>
+    <h2> Create Game/ Join Game </h2>
+    
+
+    <h2>Check Balance</h2>
+    <button class="button" type="button" onclick="getBalanceETH()">Get ETH Balance</button>
+    <p id="balanceEth">Balance ETH: </p>
+    <hr>
+    <h2>Gamemaster</h2>
+    <button class="button" type="button" onclick="createGame()">Create Game</button>
+    <p id="gamecreated">Game Address: </p>
+    <hr>
+    <h2>Spieler 1</h2>
+    <button class="button" type="button" onclick="joinGame()">Join Game</button>
+    <input type="text" id="NUMBERID" placeholder="Number">
+    <button class="button" type="button" onclick="submitNumber()">Submit Number</button>
+    <input type="text" id="SALTID" placeholder="Salt">
+    <button class="button" type="button" onclick="submitSalt()">Submit Salt</button>
+    <br>
+    <button type="button" id="ABMELDENID"> Austreten </button>
+    <hr>
+    <h2>Spieler 2</h2>
+    <button class="button" type="button" onclick="joinGame()">Join Game</button>
+    <input type="text" id="NUMBERID" placeholder="Number">
+    <button class="button" type="button" onclick="submitNumber()">SubmitNumber</button>
+    <input type="text" id="SALTID" placeholder="Salt">
+    <button class="button" type="button" onclick="submitSalt()">Submit Salt</button>
+    <br>
+    <button type="button" id="ABMELDENID"> Austreten </button>
+    <hr>
+    <h2>Spieler 3</h2>
+    <button class="button" type="button" onclick="joinGame()">Join Game</button>
+    <input type="text" id="NUMBERID" placeholder="Number">
+    <button class="button" type="button" onclick="submitNumber()">Submit Number</button>
+    <input type="text" id="SALTID" placeholder="Salt">
+    <button class="button" type="button" onclick="submitSalt()">Submit Salt</button>
+    <br>
+    <button type="button" id="ABMELDENID"> Austreten </button>
+    <hr>
+</body>
+
+</html>
