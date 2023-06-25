@@ -5,27 +5,27 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SignedMath.sol";
 
-// Note SafeMath is generally not needed starting with Solidity 0.8, since the compiler now has built in overflow checking.
-/* Note Comments for Jan, built a test in the FrontEnd to check wether the Number submitted before it is turned into a hash value,
- that is is an integer. */
-
+/**
+ * @title GameBC3
+ * @notice This contract represents a betting game, where players commit a number, then reveal it. The winner is determined based on specific rules.
+ */
 contract GameBC3 is ReentrancyGuard {
     using Math for uint256;
 
     // Constant variables
     uint256 public constant maxNumberOfPlayers = 20;
     uint256 public constant minNumberOfPlayers = 3;
-    uint256 public constant entryFee = 0.1 * 10**18;
-    
+    uint256 public constant entryFee = 0.1 * 10 ** 18;
 
     // Game state variables
-    uint256 public revealPhaseStartTime;
+    uint256 public commitHashCountdownEndtime;
+    uint256 public revealPhaseCountdownEndtime;
     uint256 public numberJoinedPlayers = 0;
     uint256 public countdown;
-    bool public gameStarted = false;
-    bool public gameEnded = false;
+    bool public commitPhase = true;
     bool public revealPhase = false;
-    
+    bool public gameEnded = false;
+    bool public ownerFailedToCall = false;
 
     // Player variables
     mapping(address => bool) public hasPaidEntryFee;
@@ -39,7 +39,8 @@ contract GameBC3 is ReentrancyGuard {
     // Contract variables
     address payable public contractOwner;
     address payable private winner;
-    Fees public gameFees; // Fees is a data type, which includes three uints (structure object) GameFees = Varibale of the Fees Type
+    Fees public gameFees; /* Fees is a data type, which includes three uints (structure object)
+                            GameFees = Varibale of the Fees Type*/
 
     // Fees struct
     struct Fees {
@@ -49,11 +50,7 @@ contract GameBC3 is ReentrancyGuard {
     }
 
     // Events
-    event GameStarted(uint256 timestamp);
-    event GameEnded(uint256 timestamp, address WinnerAddress);
-    event RewardRecorded(address indexed winner, uint256 rewardAmount, uint256 timestamp);
-    event ServiceFeeRecorded(address indexed contractOwner, uint256 feeAmount, uint256 timestamp);
-    event Withdrawal(address indexed recipient, uint256 amount, uint256 timestamp);
+    event PlayerJoined(address indexed playerAddress, uint256 timestamp);
     event PlayerCommitted(
         address indexed playerAddress,
         bytes32 commitment,
@@ -65,67 +62,96 @@ contract GameBC3 is ReentrancyGuard {
         uint256 number,
         uint256 timestamp
     );
+    event RewardRecorded(
+        address indexed winner,
+        uint256 rewardAmount,
+        uint256 timestamp
+    );
+    event ServiceFeeRecorded(
+        address indexed contractOwner,
+        uint256 feeAmount,
+        uint256 timestamp
+    );
+    event Withdrawal(
+        address indexed recipient,
+        uint256 amount,
+        uint256 timestamp
+    );
     event PlayerRemoved(address indexed playerAddress, uint256 timestamp);
     event PlayerRefundClaimed(
         address indexed playerAddress,
         uint256 amount,
         uint256 timestamp
     );
+    event GameEnded(uint256 timestamp, address WinnerAddress);
+    event GameForceEnded(uint256 timestamp, bool ownerFailedToCall);
 
+
+    /**
+     * @dev Initialize the contract with default settings.
+     */
     function initialize() public {
         contractOwner = payable(msg.sender);
-        gameStarted = false;
         gameEnded = false;
         countdown = block.timestamp + 86400; // A day in seconds
+        commitHashCountdownEndtime = block.timestamp + 21600; // 6 hours in seconds for the commit phase
+        revealPhaseCountdownEndtime = block.timestamp + 43200; // 12 hours in seconds for the reveal phase
     }
 
-    // Adds a check wether the contractOwner is still active, maybe use PullPattern to
     modifier onlyOwner() {
         require(
             msg.sender == contractOwner,
-            "Only the contract owner can call this function"
+            "Only the contract owner can call this function."
         );
         _;
     }
 
-    /* Hash is ein byte32 kein string -- > hash wird im FrontEnd erzeugt mit web3 utils soldity SHA-3 --> 
-        web3.utils.soliditySha3({ t: 'uint256', v: number }, { t: 'string', v: secret }) */
-    /// @notice Allows a player to join the game after paying the entry fee.
-    /// @notice Allows a player to commit their hashed number and salt.
+    /// @notice Allows a player to join the game after paying the entry fee and committing their hashed number and salt.
     /// @param _hash Hashed combination of the player's number and a secret salt.
     function commitHash(bytes32 _hash) public payable {
+        require(commitPhase == true, "The commit phase has ended.");
         require(
             revealPhase == false,
-            "Reveal phase has started, cannot commit number now"
+            "Reveal phase has started, cannot commit the hash of a number and salt now."
         );
         require(
             !hasPaidEntryFee[msg.sender],
             "You have already paid the entry fee and commited a hash, you already joined the game!"
         );
         require(
-            numberJoinedPlayers <= maxNumberOfPlayers,
-            "Max number of players reached"
+            numberJoinedPlayers < maxNumberOfPlayers,
+            "Max number of players reached."
         );
         require(
             msg.value == entryFee,
-            "Please pay the exact participation fee of 0.1 ether"
+            "Please pay the exact participation fee of 0.1 ether."
         );
         require(
             playerCommitments[msg.sender] == bytes32(0),
-            "You have already committed a number and salt"
+            "You have already committed a number and salt."
         ); //Checks whether the player has already submitted a hash.
+        require(
+            block.timestamp <= commitHashCountdownEndtime,
+            "The commit phase has ended."
+        );
 
         hasPaidEntryFee[msg.sender] = true;
         numberJoinedPlayers++;
 
         playerCommitments[msg.sender] = _hash;
 
+        emit PlayerJoined(msg.sender, block.timestamp);
         emit PlayerCommitted(msg.sender, _hash, block.timestamp);
     }
 
-    /// @dev Helper function - Starts the reveal phase of the game.
+    // @notice Helper function - The contract owner can call this function to start the reveal phase of the game.
     function startRevealPhase() public onlyOwner {
         require(numberJoinedPlayers >= minNumberOfPlayers);
+        require(
+            block.timestamp > commitHashCountdownEndtime,
+            "The commit phase has not ended."
+        );
+        commitPhase = false;
         revealPhase = true;
         emit RevealPhaseStarted(block.timestamp);
     }
@@ -138,7 +164,11 @@ contract GameBC3 is ReentrancyGuard {
             revealPhase == true,
             "The reveal phase has not started yet wait for four blocks to be mined."
         );
-        // require(block.timestamp <= countdown);
+        require(
+            block.timestamp <= revealPhaseCountdownEndtime,
+            "The reveal phase has ended."
+        );
+        require(gameEnded == false, "The game is already finished.");
         require(
             !playerHasRevealed[msg.sender],
             "You have already revealed your number."
@@ -150,7 +180,7 @@ contract GameBC3 is ReentrancyGuard {
         );
         require(
             _number >= 0 && _number <= 1000,
-            "Number must be between 0 and 1000."
+            "Number had to be between 0 and 1000. You are diqualified!"
         );
 
         /* Solved -- Aussicht für Doku// the last player pays the gas fees for determineWinner(). 
@@ -169,7 +199,11 @@ contract GameBC3 is ReentrancyGuard {
 
     /// @notice Determines and sets the winner of the game.
     function determineWinner() public onlyOwner {
-        require(revealPhase == true, "The reveal phase has not started yet.");
+        require(
+            revealPhase == true &&
+                block.timestamp > revealPhaseCountdownEndtime,
+            "The reveal phase has not ended."
+        );
         require(gameEnded == false, "Game has ended.");
         require(playersWhoHaveRevealed.length >= minNumberOfPlayers); //Impliziert gegeben durch revealPhase == True.
 
@@ -181,7 +215,9 @@ contract GameBC3 is ReentrancyGuard {
 
         // Calculate 2/3 of the average
         uint256 twoThirdAverage = (66 * totalSum) /
-            (100 * playersWhoHaveRevealed.length); /* In Soldity, a standard division results in a whole number rounded down to 
+            (100 *
+                playersWhoHaveRevealed
+                    .length); /* In Soldity, a standard division results in a whole number rounded down to 
             0 (https://docs.openzeppelin.com/contracts/4.x/api/utils#SignedMath)*/
 
         //event twoThirdAverage
@@ -224,10 +260,11 @@ contract GameBC3 is ReentrancyGuard {
         gameFees.winnerReward = (gameFees.totalEntryFees * 9) / 10; // 90% of the total entryFees are the winnerReward
         gameEnded = true;
         emit GameEnded(block.timestamp, winner);
+
         recordRewards();
     }
 
-        /** If there are multiple players with the closest number, select a random winner among them. Here the hash function keccak256 
+    /** If there are multiple players with the closest number, select a random winner among them. Here the hash function keccak256 
             is used to generate a pseudo-random number based on the current block timestamp and on the block number. 
             These two values are first combined using the abi.encodePacked() function to generate a byte array, 
             which is passed as an argument to keccak256(). The result is then cast into a uint256 variable and counted with the 
@@ -235,62 +272,76 @@ contract GameBC3 is ReentrancyGuard {
             between 0 and 2^256 - 1. It is taken modulo the number of players with the closest number to the two-thirds average, 
             to get an index within that range.**/
 
-
     /// @notice Records the rewards for the winner and the contract owner.
     function recordRewards() internal {
         require(gameEnded == true);
         require(
             gameFees.winnerReward > 0,
-            "The winner reward has already been claimed"
+            "The winner reward has already been claimed."
         );
         require(
             gameFees.serviceFee > 0,
-            "The service fee has already been claimed by the contract owner"
+            "The service fee has already been claimed by the contract owner."
         );
 
-        // Adds a condition to check if the game ended within the required time
-        if(block.timestamp <= countdown) {
-            // If the game ended in time, the rewards are recorded as before
-            pendingWithdrawals[winner] = gameFees.winnerReward;
-            emit RewardRecorded(winner, gameFees.winnerReward, block.timestamp);
+        pendingWithdrawals[winner] = gameFees.winnerReward;
+        emit RewardRecorded(winner, gameFees.winnerReward, block.timestamp);
 
+        if (block.timestamp <= countdown) {
             pendingWithdrawals[contractOwner] = gameFees.serviceFee;
-            emit ServiceFeeRecorded(contractOwner, gameFees.serviceFee, block.timestamp);
-        } else {
-            // If the game did not end in time, players who revealed their numbers can claim back their entry fee
-            for (uint i = 0; i < playersWhoHaveRevealed.length; i++) {
-                address playerAddress = playersWhoHaveRevealed[i];
-                pendingWithdrawals[playerAddress] = entryFee;
-            }
+            emit ServiceFeeRecorded(
+                contractOwner,
+                gameFees.serviceFee,
+                block.timestamp
+            );
         }
     }
 
-
-    /// @notice Allows a recipient to withdraw their funds.
+    // @notice The winner or the contract owner can call this function to withdraw their funds.
     function withdraw() public nonReentrant {
-        uint amount = pendingWithdrawals[msg.sender];
-        require(amount > 0, "No funds available for withdrawal");
+        uint256 amount = pendingWithdrawals[msg.sender];
+        require(
+            msg.sender == winner || msg.sender == contractOwner,
+            "Only the winner or contractOwner can call the withdraw function"
+        );
+        require(amount > 0, "No funds available for withdrawal.");
+        require(
+            winner != address(0),
+            "A winner has not been determined. Therefore you can't withdraw the winnerReward of serviceFee."
+        );
+        if (msg.sender == contractOwner) {
+            require(
+                ownerFailedToCall = false,
+                "You missed to call the determineWinner function, you cannot withdraw the serviceFee."
+            );
+        }
 
-        // Remember to zero the pending refund before
-        // sending to prevent re-entrancy attacks
         pendingWithdrawals[msg.sender] = 0;
 
         (bool success, ) = payable(msg.sender).call{value: amount}("");
-        require(success, "Transfer failed");
+        require(success, "Transfer failed.");
         emit Withdrawal(msg.sender, amount, block.timestamp);
     }
 
-
-    /// @notice Allows a player to leave the game before their number is revealed, refunding their entry fee.
+    // @notice Allows a player to leave the game and refund his entry fee.
     function leaveGame() public nonReentrant {
-        require(hasPaidEntryFee[msg.sender], "You haven't joined the game yet");
         require(
-            !playerHasRevealed[msg.sender],
-            "You have revealed a number, you cannot claim a refund"
+            gameEnded == true ||
+                playersWhoHaveRevealed.length < minNumberOfPlayers
         );
         require(
-            block.timestamp >= countdown,
-            "You have to wait a day from the ccontract creation block.timestamp on, to leave the game."
+            hasPaidEntryFee[msg.sender],
+            "You haven't joined the game yet."
+        );
+        if (playerHasRevealed[msg.sender]) {
+            require(
+                winner == address(0),
+                "A winner has already been determined, you are not allowed to leave the game and get a refund."
+            );
+        }
+        require(
+            block.timestamp >= countdown + countdown,
+            "You cannot leave the game before the countdown is over."
         );
 
         // Resets the mappings for the player's address
@@ -304,5 +355,19 @@ contract GameBC3 is ReentrancyGuard {
         require(refundSuccess, "Refund failed");
 
         emit PlayerRefundClaimed(msg.sender, entryFee, block.timestamp);
+    }
+    
+    // @notice If the contract owner fails to respond, any player can call this function to end the game.
+    function endGameIfNoResponseFromContractOwner() public {
+        require(block.timestamp > countdown, "The countdown has not ended.");
+        require(gameEnded == false, "The game has already ended.");
+        gameEnded = true;
+
+        ownerFailedToCall = true;
+        emit GameForceEnded(block.timestamp, ownerFailedToCall);
+
+        if (playersWhoHaveRevealed.length < minNumberOfPlayers) {
+            determineWinner();
+        }
     }
 }

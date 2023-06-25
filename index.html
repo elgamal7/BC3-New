@@ -1,805 +1,945 @@
+<!DOCTYPE html>
 <html>
-
 <head>
-
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-
+    <title>Blockchain3Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.3.0/dist/web3.min.js"></script>
     <script>
-        const contractAddress_game = "0x3A1B0389eb69BC362257348F2449Df3536044a60";
-        const contractAddress = "0xCC8456f29C95882b9Ad5d1Bd7D8E1174793c668D";
-        let web3
-        let contract
-        let contract_game
+        let web3, accounts, contractFactory, contractGame;
+        const factoryContractAddress = "0x0B71e13FFa8EE42e84363feD71c235cC880b44e4";
+        const gameContractAddress = "0xd059872EFEB73959cFb7f886cD10ADD33bb2B3b2";
+        const factoryABI = [
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_template",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "gameAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			}
+		],
+		"name": "GameCreated",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "createGame",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "games",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getGames",
+		"outputs": [
+			{
+				"internalType": "address[]",
+				"name": "",
+				"type": "address[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "template",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
+        
+                        
+        const gameABI = [
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "WinnerAddress",
+				"type": "address"
+			}
+		],
+		"name": "GameEnded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "ownerFailedToCall",
+				"type": "bool"
+			}
+		],
+		"name": "GameForceEnded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "playerAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes32",
+				"name": "commitment",
+				"type": "bytes32"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "PlayerCommitted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "playerAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "PlayerJoined",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "playerAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "PlayerRefundClaimed",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "playerAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "PlayerRemoved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "playerAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "number",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "PlayerRevealed",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "RevealPhaseStarted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "winner",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "rewardAmount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "RewardRecorded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "contractOwner",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "feeAmount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "ServiceFeeRecorded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "recipient",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			}
+		],
+		"name": "Withdrawal",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "closestPlayers",
+		"outputs": [
+			{
+				"internalType": "address payable",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "_hash",
+				"type": "bytes32"
+			}
+		],
+		"name": "commitHash",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "commitHashCountdownEndtime",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "commitPhase",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "contractOwner",
+		"outputs": [
+			{
+				"internalType": "address payable",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "countdown",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "determineWinner",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "endGameIfNoResponseFromContractOwner",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "entryFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "gameEnded",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "gameFees",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "totalEntryFees",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "serviceFee",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "winnerReward",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "hasPaidEntryFee",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "initialize",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "leaveGame",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "maxNumberOfPlayers",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "minNumberOfPlayers",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "numberJoinedPlayers",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "ownerFailedToCall",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "pendingWithdrawals",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "playerCommitments",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "playerHasRevealed",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "playersWhoHaveRevealed",
+		"outputs": [
+			{
+				"internalType": "address payable",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_number",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_salt",
+				"type": "string"
+			}
+		],
+		"name": "revealNumber",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "revealPhase",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "revealPhaseCountdownEndtime",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "startRevealPhase",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]
+                        
 
-        async function enable() {
+
+        async function startApp() {
             if (window.ethereum) {
-                ethereum.request({ method: 'eth_requestAccounts' }).then(function (res) {
-                    account = res[0]
-                    console.log('Connected Account: ' + account);
-                    web3 = new Web3(window.ethereum);
-                    document.getElementById("metamask").innerHTML = "Metamask is enabled!\n Connected Account: " + account;
-                    
-                    let abi = getAbi();
-                    
-                    
-                    
-                    
-                    contract = new web3.eth.Contract(abi, contractAddress);
-                    console.log(contract)
-                    //contract_game = new web3.eth.Contract(abi_game, contractAddress_game)
-                    console.log(contract_game)
-
-                    // contract objekt erstellen
-                    // let abi = getAbi(); // die Funktion gibt die ABI zurück
-                    //contract = new web3.eth.Contract(abi, contractAddress);
-
-                })
-
+                window.web3 = new Web3(window.ethereum);
+                web3 = window.web3;
+                try {
+                    await window.ethereum.enable();
+                    accounts = await web3.eth.getAccounts();
+                    contractFactory = new web3.eth.Contract(factoryABI, factoryContractAddress);
+                    contractGame = new web3.eth.Contract(gameABI, gameContractAddress);
+                    console.log("App initialized successfully");
+                    console.log('Connected Account: ' + accounts);
+                    document.getElementById("accounts").innerHTML = accounts;
+                } catch (err) {
+                    console.error("Failed to initialize the app", err);
+                }
+            } else {
+                console.log("Non-Ethereum browser detected. Please install MetaMask");
             }
         }
 
-        async function getBalanceETH() {
-
-            let balanceWei = await web3.eth.getBalance(account);
-            let balance = web3.utils.fromWei(balanceWei, 'ether');
-            document.getElementById("balanceEth").innerHTML = "Balance ETH: " + balance + " ETH";
-
+        async function createGame() {
+            try {
+                const gameAddress = await contractFactory.methods.createGame().send({from: accounts[0]});
+                console.log("Game created at address", gameAddress);
+                document.getElementById("createGameOutput").innerText = "Game Address: "+ gameAddress.events.GameCreated.address;
+                console.log(gameAddress)
+                return gameAddress;
+                
+                
+            } catch (err) {
+                console.error("Failed to create game", err);
+            }
         }
 
-    
+  
 
-        async function sendTransaction() {
-            
-            // contract aufrufen
-            // siehe: https://web3js.readthedocs.io/en/v1.2.11/web3-eth-contract.html
-            // let tx = await contract.methods.METHOD_NAME(PARAMETER).send({ from: account, value:contract_st VALUE });
-
-        }
-
-
-        function getAbi_Game() {  [
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "WinnerAddress",
-          "type": "address"
-        }
-      ],
-      "name": "GameEnded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "GameStarted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "playerAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "bytes32",
-          "name": "commitment",
-          "type": "bytes32"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "PlayerCommitted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "playerAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "PlayerRefundClaimed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "playerAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "PlayerRemoved",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "playerAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "number",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "PlayerRevealed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "RevealPhaseStarted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "winner",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "rewardAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "RewardRecorded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "contractOwner",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "feeAmount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "ServiceFeeRecorded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "Withdrawal",
-      "type": "event"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "closestPlayers",
-      "outputs": [
-        {
-          "internalType": "address payable",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "bytes32",
-          "name": "_hash",
-          "type": "bytes32"
-        }
-      ],
-      "name": "commitHash",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "contractOwner",
-      "outputs": [
-        {
-          "internalType": "address payable",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "countdown",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "determineWinner",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "entryFee",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "gameEnded",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "gameFees",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "totalEntryFees",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "serviceFee",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "winnerReward",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "gameStarted",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "hasPaidEntryFee",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "initialize",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "leaveGame",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "maxNumberOfPlayers",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "minNumberOfPlayers",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "numberJoinedPlayers",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "pendingWithdrawals",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "playerCommitments",
-      "outputs": [
-        {
-          "internalType": "bytes32",
-          "name": "",
-          "type": "bytes32"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "name": "playerHasRevealed",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "playersWhoHaveRevealed",
-      "outputs": [
-        {
-          "internalType": "address payable",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "_number",
-          "type": "uint256"
-        },
-        {
-          "internalType": "string",
-          "name": "_salt",
-          "type": "string"
-        }
-      ],
-      "name": "revealNumber",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "revealPhase",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "revealPhaseStartTime",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "startRevealPhase",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "withdraw",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ]
-  }
-        function getAbi() {
-            // return ABI
-            return [
-     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_template",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "gameAddress",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "creator",
-          "type": "address"
-        }
-      ],
-      "name": "GameCreated",
-      "type": "event"
-    },
-    {
-      "inputs": [],
-      "name": "createGame",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "games",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getGames",
-      "outputs": [
-        {
-          "internalType": "address[]",
-          "name": "",
-          "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "template",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    }
-  ]
-}
-        
-let createGamePromise;
-async function createGame() {
-  try {
-    createGamePromise = contract.methods.createGame().send({ from: account });
-    console.log("Creating game...");
-  } catch (error) {
-    console.error(error);
-  }
-}
-async function getGameAddress() {
-  try {
-    if (!createGamePromise) {
-      console.error("Game not created yet.");
-      return;
-    }
-    let receipt = await createGamePromise;
-    if (receipt.events.GameCreated) {
-      let gameAddress = receipt.events.GameCreated.returnValues.gameAddress;
-      document.getElementById("gamecreated").innerHTML = "Game Address: " + gameAddress;
-      var gameAddressElement = document.getElementById('gameAddress');
-      gameAddressElement.textContent = "Game address: " + gameAddress;
-    } else {
-      console.log("GameCreated event not triggered");
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-//     if (tx.events && tx.events.GameCreated) {
-//       let gameAddress = tx.events.GameCreated.returnValues.gameAddress;
-//       document.getElementById("gamecreated").innerHTML = "Game Address: " + gameAddress;
-//       // Get the gameAddress element
-//       var gameAddressElement = document.getElementById('gameAddress');
-//       // Update the content with the game address
-//       gameAddressElement.textContent = "Game address: " + gameAddress;
-//     } else {
-//       console.log("GameCreated event not triggered");
-//     }
-//   } catch (error) {
-//     console.error(error);
-//   }
-// }
-
-
-        
         async function getGames() {
-            let tx = await contract.methods.getGames().send({ from: account });
-            console.log("join game")
-            document.getElementById("getGames").innerHTML = tx;
-            
+            try {
+                const games = await contractFactory.methods.getGames().call();
+                console.log("Got games", games);
+                return games;
+            } catch (err) {
+                console.error("Failed to get games", err);
+            }
         }
+
+      
+
+        function hashNumber(number, salt) {
+            const hash = web3.utils.soliditySha3(number, salt);
+            return hash;
+        }
+
+        
+
+        async function commitHash() {
+            let gameAddress = document.getElementById("gameAddressInput").value;
+            const number = document.getElementById("numberInput").value;
+            const salt = document.getElementById("saltInput").value;
+
+            if (gameAddress === "") {
+                gameAddress = await contractFactory.methods.getGames().call()[0];
+            }
+
+            //const hashedNumber = web3.utils.soliditySha3(number, salt);
+            const hashedNumber = web3.utils.soliditySha3({ t: 'uint256', v: number }, { t: 'string', v: salt });
+            
+            try {
+                await contractGame.methods.commitHash(hashedNumber).send({ from: accounts[0] });
+                console.log("Joined game and committed number to the game", gameAddress, hashedNumber);
+                document.getElementById("commitHashOutput").innerText = `Joined game and committed number to the game ${gameAddress} and your NumberHash is ${hashedNumber}`;
+            } catch (err) {
+                console.error("Failed to join game and commit number to the game", err);
+            }
+    }
+
+        // 3. startRevealPhase()
+        async function startRevealPhase() {
+            try {
+                const revealPhase = await contractGame.methods.startRevealPhase().send({ from: accounts[0] });
+                console.log("Reveal phase started");
+            } catch (err) {
+                console.error("Failed to start reveal phase", err);
+            }
+        }
+
+        // 4. revealNumber(uint256 _number, string memory _salt)
+        async function revealNumber(number, salt) {
+            try {
+                const revealnumber = await contractGame.methods.revealNumber(number, salt).send({ from: accounts[0] });
+                document.getElementById("revealNumber").innerText = "Your Number is:" + number;
+                console.log("Number revealed successfully" + number);
+            } catch (err) {
+                console.error("Failed to reveal number", err);
+            }
+        }
+
+        // 5. determineWinner()
+        async function determineWinner() {
+            try {
+                await contractGame.methods.determineWinner().send({ from: accounts[0] });
+                console.log("Winner determined");
+                document.getElementById("determineWinner").innerText = "The Winner is:" + accounts;
+            } catch (err) {
+                console.error("Failed to determine winner", err);
+            }
+        }
+
+        // 6. recordRewards()
+        async function recordRewards() {
+            try {
+                const recordRewards = await contractGame.methods.recordRewards().send({ from: accounts[0] });
+                console.log("Rewards recorded" + recordRewards);
+                document.getElementById("recordRewards").innerText = "The Rewards are:" + recordRewards;
+            } catch (err) {
+                console.error("Failed to record rewards", err);
+            }
+        }
+
+        // 7. withdraw()
+        async function withdraw() {
+            try {
+                await contractGame.methods.withdraw().send({ from: accounts[0] });
+                console.log("Withdrawal successful");
+            } catch (err) {
+                console.error("Failed to withdraw", err);
+            }
+        }
+
+        // 8. leaveGame()
+        async function leaveGame() {
+            try {
+                await contractGame.methods.leaveGame().send({ from: accounts[0] });
+                console.log("Left the game");
+            } catch (err) {
+                console.error("Failed to leave the game", err);
+            }
+        }
+
+         async function endGameIfNoResponseFromContractOwner() {
+             try {
+                const games = await contractFactory.methods.endGameIfNoResponseFromContractOwner().send({ from: accounts[0] });
+                console.log("Game Ended because no reaction from contract owner for the following Game:", games);
+                return games;
+            } catch (err) {
+                 console.error("Failed to get games", err);
+            }
+        }
+
+
+
+
+
 
     </script>
 </head>
-
 <body>
-    <h1>2/3 Blockchain3Game</h1>
-    <h2>Connect Metamask</h2>
-    <button class="button" type="button" onclick="enable()">Enable MetaMask</button>
-    <p id="metamask"></p>
+    <h1>Blockchain 3 Game</h1>
+
+    <button onclick="startApp().then(accounts => document.getElementById('gameAddressOutput').innerText = accounts.account(', '))">Connect Metamask</button>
+    <p>Account:</p>
+    <p id="accounts">Not connected yet!</p>
+    <hr/>
+
+    <h2>Create Game</h2>
+    <button onclick="createGame()">Create Game</button>
+
+    <p id="createGameOutput">Creating Game...</p>
+
+    <hr/>
+
+    <h2>Get Games</h2>
+    <button onclick="getGames().then(games => document.getElementById('gamesOutput').innerText = games.join(', '))">Get Games</button>
+    <p id="gamesOutput"></p>
+
+    <hr/>
+
   
     
+    <h2>Commit Hash</h2>
+    <label for="gameAddressInput"></label>
+    <input type="text" id="gameAddressInput" placeholder="Enter Game Address">
+    <br>
+    <label for="numberInput"></label>
+    <input type="number" id="numberInput" placeholder="Enter Number">
+    <br>
+    <label for="saltInput"></label>
+    <input type="text" id="saltInput" placeholder="Enter Salt">
+    <br>
+    <button onclick="commitHash()">Join Game & Commit Hash</button>
+    <p id="commitHashOutput"></p>
 
-    <h2>Check Balance</h2>
-    <button class="button" type="button" onclick="getBalanceETH()">Get ETH Balance</button>
-    <p id="balanceEth">Balance ETH: </p>
-    <hr>
-    <h2>Gamemaster</h2>
-    <button class="button" type="button" onclick="createGame()">Create Game</button>
-    <p id="gameAddress">Game Address active: </p>
-    <p id="gamecreated">Game Address: </p>
-    <hr>
-    <h2>Spieler 1</h2>
-    <button class="button" type="button" onclick="joinGame()">Join Game</button>
-    <input type="text" id="NUMBERID" placeholder="Number">
-    <button class="button" type="button" onclick="submitNumber()">Submit Number</button>
-    <input type="text" id="SALTID" placeholder="Salt">
-    <button class="button" type="button" onclick="submitSalt()">Submit Salt</button>
+    <hr/>
+
+    <h2>Start Reveal Phase</h2>
+    <button onclick="startRevealPhase()">Start Reveal Phase</button>
+
+    <hr/>
+
+    <h2>Reveal Number</h2>
+    <label for="revealNumberInput">Number:</label>
+    <input type="number" id="revealNumberInput" placeholder="Enter Number">
     <br>
-    <button type="button" id="ABMELDENID"> Austreten </button>
-    <hr>
-    <h2>Spieler 2</h2>
-    <button class="button" type="button" onclick="joinGame()">Join Game</button>
-    <input type="text" id="NUMBERID" placeholder="Number">
-    <button class="button" type="button" onclick="submitNumber()">SubmitNumber</button>
-    <input type="text" id="SALTID" placeholder="Salt">
-    <button class="button" type="button" onclick="submitSalt()">Submit Salt</button>
+    <label for="revealSaltInput">Salt:</label>
+    <input type="text" id="revealSaltInput" placeholder="Enter Salt">
     <br>
-    <button type="button" id="ABMELDENID"> Austreten </button>
-    <hr>
-    <h2>Spieler 3</h2>
-    <button class="button" type="button" onclick="joinGame()">Join Game</button>
-    <input type="text" id="NUMBERID" placeholder="Number">
-    <button class="button" type="button" onclick="submitNumber()">Submit Number</button>
-    <input type="text" id="SALTID" placeholder="Salt">
-    <button class="button" type="button" onclick="submitSalt()">Submit Salt</button>
-    <br>
-    <button type="button" id="ABMELDENID"> Austreten </button>
-    <hr>
+    <button onclick="revealNumber(document.getElementById('revealNumberInput').value, document.getElementById('revealSaltInput').value)">Reveal Number</button>
+    <p id="revealNumber"></p>
+    <hr/>
+
+    <h2>Determine Winner</h2>
+    <button onclick="determineWinner()">Determine Winner</button>
+    <p id="determineWinner"></p>
+    <hr/>
+
+    <h2>Record Rewards</h2>
+    <button onclick="recordRewards()">Record Rewards</button>
+
+    <hr/>
+
+    <h2>Withdraw</h2>
+    <button onclick="withdraw()">Withdraw</button>
+
+    <hr/>
+
+    <h2>Leave Game</h2>
+    <button onclick="leaveGame()">Leave Game</button>
+
+    <h2>End Game because no reaction from contract owner</h2>
+    <button onclick="endGameIfNoResponseFromContractOwner()">End game no reaction</button>
+
+    <hr/>
 </body>
-
 </html>

@@ -6,16 +6,30 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-contract GameFactoryBC3 {
+
+/**
+ * @title MyGameFactory
+ * @dev A factory contract for creating instances of GameBC3 contracts using a template.
+ */
+contract MyGameFactory {
     address[] public games;
     address public template;
 
     event GameCreated(address gameAddress, address creator);
 
+
+    /**
+     * @dev Constructor function.
+     * @param _template The address of the template contract to clone.
+     */
     constructor(address _template) {
         template = _template;
     }
 
+    /**
+     * @dev Creates a new game contract by cloning the template contract.
+     * @return The address of the newly created game contract.
+     */
     function createGame() external returns (address) {
         address clone = Clones.clone(template);
         GameBC3(clone).initialize();
@@ -26,6 +40,10 @@ contract GameFactoryBC3 {
         return clone;
     }
 
+     /**
+     * @dev Retrieves the array of game contract addresses created by this factory.
+     * @return An array of game contract addresses.
+     */
     function getGames() external view returns (address[] memory) {
         return games;
     }
